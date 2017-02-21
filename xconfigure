@@ -1,0 +1,1 @@
+./configure --prefix=/home/michele/gstreamer_mms/gst-1.6.0/new-out CCFLAGS=-I/usr/lib/x86_64-linux-gnu/glib-2.0/include/

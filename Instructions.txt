@@ -1,0 +1,12 @@
+After valid installation of gstreamer:
+For compiling rtsp-server:
+   edit devel.env and adjust parameters
+   edit xconfigure and adjust parameters
+   source devel.env
+   ./xconfigure
+   make
+
+Running gazebo-streamer:
+ source devel.env
+ examples/gazebo-server
+ 

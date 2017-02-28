@@ -30,6 +30,8 @@
 #include <semaphore.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+//and signal
+#include <signal.h>
 
 static GMainLoop *loop;
 static int Image_Count = 0;
@@ -40,7 +42,7 @@ typedef struct
 } MyContext;
 
 //shared memory management
-static key_t key[3];
+static key_t key[] = {8400,8401,8402};
 #define SHMSZ     1000000 //921600
 int shmid[3];
 void *shmvoid[3];
@@ -48,6 +50,16 @@ void *shmvoid[3];
 //semaphores
 const char *SEM_NAME[]= {"sem0", "sem1", "sem2" };
 sem_t *mutex[3];
+
+//Cleaning function
+void clean_all(int signum){
+  int i;
+  printf("Cleaning function has been called");
+  for (i=0;i<3;i++){
+               sem_close(mutex[i]);
+               shmctl(shmid[i], IPC_RMID,0 );
+   }
+}
 
 /* called when we need to give data to appsrc */
 static void
@@ -126,10 +138,13 @@ need_data (GstElement * appsrc, guint unused, MyContext * ctx)
 
   if (ret != GST_FLOW_OK) {
     /* something wrong, stop pushing */
+    clean_all(2);
     g_main_loop_quit (loop);
   }
   
 }
+
+
 
 /* called when a new media pipeline is constructed. We can query the
  * pipeline and configure our appsrc */
@@ -250,9 +265,6 @@ main (int argc, char *argv[])
   }
   
   //Attach shared memory
-  key[0] = 8400;
-  key[1] = 8401;
-  key[2] = 8402;
   for (i=0; i<3; i++) {
     if ((shmid[i] = shmget(key[i], SHMSZ, IPC_CREAT | 0666)) < 0) {
             perror("shmget");
@@ -267,9 +279,19 @@ main (int argc, char *argv[])
             //exit(1);
     }
     printf("Segment %d has been attached <%d> ?!\n", i, shmid[i]);
+    //create and initialize semaphores
+    printf("Now Create and initialize semaphores %d, <%s>\n", i, SEM_NAME[i]);
+    mutex[i] = sem_open(SEM_NAME[i],0,0644,0);
+    if(mutex[i] == SEM_FAILED)
+    {
+      perror("reader:unable to execute semaphore");
+      sem_close(mutex[i]);
+      exit(-1);
+    }
   }
-  //create and initialize semaphores
-  printf("Now Create and initialize semaphores\n");
+  //signal handler
+  //signal(SIGINT, clean_all);
+  
   /* start serving */
   g_print ("stream ready at rtsp://127.0.0.1:8554/test\n");
   g_main_loop_run (loop);

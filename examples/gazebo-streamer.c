@@ -54,11 +54,13 @@ sem_t *mutex[3];
 //Cleaning function
 void clean_all(int signum){
   int i;
-  printf("Cleaning function has been called");
+  g_print("Cleaning function has been called signal %d\n", signum);
   for (i=0;i<3;i++){
                sem_close(mutex[i]);
+	       sem_unlink(SEM_NAME[i]);
                shmctl(shmid[i], IPC_RMID,0 );
    }
+   _exit(1);
 }
 
 /* called when we need to give data to appsrc */
@@ -270,7 +272,6 @@ main (int argc, char *argv[])
             perror("shmget");
             // exit(1);
     }
-    else printf("Segment %d has been created <%d> ?!\n", i, shmid[i]);
       /*
        * Now we attach the segment to our data space.
        */
@@ -278,9 +279,8 @@ main (int argc, char *argv[])
             perror("shmat");
             //exit(1);
     }
-    printf("Segment %d has been attached <%d> ?!\n", i, shmid[i]);
+    g_print("Segment %d has been created and attached <%d> ?!\n", i, shmid[i]);
     //create and initialize semaphores
-    printf("Now Create and initialize semaphores %d, <%s>\n", i, SEM_NAME[i]);
     mutex[i] = sem_open(SEM_NAME[i],0,0644,0);
     if(mutex[i] == SEM_FAILED)
     {
@@ -288,10 +288,13 @@ main (int argc, char *argv[])
       sem_close(mutex[i]);
       exit(-1);
     }
+    g_print("Semaphore %d, <%s> has been created and initialized\n", i, SEM_NAME[i]);
   }
   //signal handler
-  //signal(SIGINT, clean_all);
-  
+  if (signal(SIGINT, clean_all) ==  SIG_ERR)
+    printf("can't catch SIGINT\n");
+  signal(SIGTERM, clean_all);
+
   /* start serving */
   g_print ("stream ready at rtsp://127.0.0.1:8554/test\n");
   g_main_loop_run (loop);

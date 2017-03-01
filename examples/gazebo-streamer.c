@@ -212,14 +212,30 @@ main (int argc, char *argv[])
   GstRTSPMediaFactory *factory;
   volatile GstElement *pipeline, *appsrc, *conv, *videosink;
   gchar *str;
+  const gchar *nano_str;
+  guint major, minor, micro, nano;
   int i;
 
+  //Init gstreamer
   gst_init (&argc, &argv);
   if (argc < 2) {
     str = g_strdup_printf("( appsrc name=mysrc ! videoconvert ! x264enc ! rtph264pay name=pay0 pt=96 )");
     //str = g_strdup_printf("(appsrc name=mysrc ! video/x-raw,format=ARGB ! videoconvert ! video/x-raw,format=YUY2 ! autovideosink name=pay0 pt=96 )");
   }
   else str = argv[1];
+  
+  //Check gstreamer version
+  gst_version (&major, &minor, &micro, &nano);
+
+  if (nano == 1)
+    nano_str = "(CVS)";
+  else if (nano == 2)
+    nano_str = "(Prerelease)";
+  else
+    nano_str = "";
+
+  printf ("This program is linked against GStreamer %d.%d.%d %s\n",
+          major, minor, micro, nano_str);
   
   loop = g_main_loop_new (NULL, FALSE);
 
